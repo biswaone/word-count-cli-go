@@ -14,3 +14,4 @@
 # Dependency directories (remove the comment below to include it)
 # vendor/
 comedy-of-errors.txt
+goroutine_wc.go
