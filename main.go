@@ -18,6 +18,12 @@ func main() {
 	// Parse flags
 	flag.Parse()
 
+	// check if all the flags are false make it true
+	if !*wc && !*lc && !*cc {
+		*wc, *lc, *cc = true, true, true
+
+	}
+
 	totalLineCount, totalWordCount, totalCharCount := 0, 0, 0
 
 	for _, arg := range flag.Args() {
@@ -53,18 +59,21 @@ func main() {
 
 	}
 
-	totalOutput := ""
-	if *lc {
-		totalOutput += fmt.Sprintf(" %d ", totalLineCount)
-	}
+	if len(flag.Args()) > 1 {
+		totalOutput := ""
+		if *lc {
+			totalOutput += fmt.Sprintf(" %d ", totalLineCount)
+		}
 
-	if *wc {
-		totalOutput += fmt.Sprintf(" %d ", totalWordCount)
+		if *wc {
+			totalOutput += fmt.Sprintf(" %d ", totalWordCount)
+		}
+		if *cc {
+			totalOutput += fmt.Sprintf(" %d ", totalCharCount)
+		}
+		fmt.Println(totalOutput, "total")
+
 	}
-	if *cc {
-		totalOutput += fmt.Sprintf(" %d ", totalCharCount)
-	}
-	fmt.Println(totalOutput, "total")
 
 }
 
