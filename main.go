@@ -2,11 +2,14 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
+	"strings"
+	"unicode/utf8"
 )
 
 func main() {
@@ -24,55 +27,41 @@ func main() {
 
 	}
 
-	totalLineCount, totalWordCount, totalCharCount := 0, 0, 0
+	// if no arguments are given take input from stdin
+	if flag.NArg() < 1 {
+		s := readStdin()
+		lineCount, wordCount, charCount := countStatsfromStdin(*wc, *lc, *cc, s)
+		printStats(lc, wc, cc, lineCount, wordCount, charCount, "")
+		// if file given in argument
+	} else {
 
-	for _, arg := range flag.Args() {
-		file, err := os.Open(arg)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "failed to open file %q: %v\n", arg, err)
-			continue // continue with the next file
+		totalLineCount, totalWordCount, totalCharCount := 0, 0, 0
+
+		for _, arg := range flag.Args() {
+			file, err := os.Open(arg)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "failed to open file %q: %v\n", arg, err)
+				continue // continue with the next file
+			}
+			defer file.Close()
+
+			lineCount, wordCount, charCount := countStats(*wc, *lc, *cc, file)
+
+			// print stats for a file
+			printStats(lc, wc, cc, lineCount, wordCount, charCount, arg)
+
+			if len(flag.Args()) > 1 {
+				totalLineCount += lineCount
+				totalWordCount += wordCount
+				totalCharCount += charCount
+			}
+
 		}
-		defer file.Close()
-
-		lineCount, wordCount, charCount := countStats(*wc, *lc, *cc, file)
-
-		output := ""
-		if *lc {
-			output += fmt.Sprintf(" %d ", lineCount)
-		}
-
-		if *wc {
-			output += fmt.Sprintf(" %d ", wordCount)
-		}
-		if *cc {
-			output += fmt.Sprintf(" %d ", charCount)
-		}
-
-		// print the results
-		fmt.Println(output, arg)
 
 		if len(flag.Args()) > 1 {
-			totalLineCount += lineCount
-			totalWordCount += wordCount
-			totalCharCount += charCount
+			// print the total count
+			printStats(lc, wc, cc, totalLineCount, totalWordCount, totalCharCount, "total")
 		}
-
-	}
-
-	if len(flag.Args()) > 1 {
-		totalOutput := ""
-		if *lc {
-			totalOutput += fmt.Sprintf(" %d ", totalLineCount)
-		}
-
-		if *wc {
-			totalOutput += fmt.Sprintf(" %d ", totalWordCount)
-		}
-		if *cc {
-			totalOutput += fmt.Sprintf(" %d ", totalCharCount)
-		}
-		fmt.Println(totalOutput, "total")
-
 	}
 
 }
@@ -127,4 +116,59 @@ func countStats(wc bool, lc bool, cc bool, file *os.File) (int, int, int) {
 
 	return lineCount, wordCount, charCount
 
+}
+
+func countStatsfromStdin(wc bool, lc bool, cc bool, s string) (int, int, int) {
+	lineCount := 0
+	wordCount := 0
+	charCount := 0
+
+	if cc {
+		charCount = utf8.RuneCountInString(s)
+	}
+
+	if lc {
+		lineCount = strings.Count(s, "\n")
+	}
+
+	if wc {
+		wordCount = len(strings.Fields(s))
+	}
+
+	return lineCount, wordCount, charCount
+
+}
+
+func readStdin() string {
+	var buf bytes.Buffer
+	scanner := bufio.NewScanner(os.Stdin)
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		if bytes.Equal(line, []byte("\x04")) {
+			break
+		}
+		buf.Write(line)
+		buf.WriteByte('\n')
+	}
+	if err := scanner.Err(); err != nil {
+		panic(err)
+	}
+	return buf.String()
+}
+
+func printStats(lc, wc, cc *bool, lineCount, wordCount, charCount int, filename string) {
+	output := ""
+	if *lc {
+		output += fmt.Sprintf(" %d ", lineCount)
+	}
+
+	if *wc {
+		output += fmt.Sprintf(" %d ", wordCount)
+	}
+	if *cc {
+		output += fmt.Sprintf(" %d ", charCount)
+	}
+
+	// print the results
+	fmt.Println(output, filename)
 }
